@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/logo.png" alt="spend_board_cli" width="200">
+  <img src="images/logo.png" alt="spend_board_cli" width="800">
 </p>
 
 <h1 align="center">spend_board_cli</h1>
