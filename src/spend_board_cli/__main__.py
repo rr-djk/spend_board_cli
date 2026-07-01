@@ -41,43 +41,92 @@ def run_parser(pdf_path: Path) -> dict:
     sys.exit(1)
 
 
+def collect_pdfs(input_path: Path) -> list[Path]:
+    """Return a list of PDF paths from a file or directory."""
+    if input_path.is_file():
+        if input_path.suffix.lower() != ".pdf":
+            print(f"Error: not a PDF file: {input_path}", file=sys.stderr)
+            sys.exit(1)
+        return [input_path]
+
+    if input_path.is_dir():
+        pdfs = sorted([p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"])
+        if not pdfs:
+            print(f"No PDF files found in directory: {input_path}", file=sys.stderr)
+            sys.exit(1)
+        return pdfs
+
+    print(f"Error: path not found: {input_path}", file=sys.stderr)
+    sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Parse RBC credit card statement PDF and append transactions to Excel."
+        description="Parse RBC credit card statement PDF(s) and append transactions to Excel."
     )
-    parser.add_argument("pdf_path", type=str, help="Path to the RBC statement PDF")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-f", "--file", type=str, dest="file_path", help="Path to a single RBC statement PDF")
+    group.add_argument("-d", "--directory", type=str, dest="dir_path", help="Path to a directory containing RBC statement PDFs")
     parser.add_argument("xlsx_path", type=str, help="Path to the output Excel file")
     args = parser.parse_args()
 
-    pdf_path = Path(args.pdf_path)
     xlsx_path = Path(args.xlsx_path)
 
-    if not pdf_path.exists():
-        print(f"Error: PDF file not found: {pdf_path}", file=sys.stderr)
+    if args.file_path is not None:
+        input_path = Path(args.file_path)
+        if not input_path.is_file():
+            print(f"Error: -f requires a file, got: {input_path}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        input_path = Path(args.dir_path)
+        if not input_path.is_dir():
+            print(f"Error: -d requires a directory, got: {input_path}", file=sys.stderr)
+            sys.exit(1)
+
+    pdf_paths = collect_pdfs(input_path)
+    all_rows: list[TransactionRow] = []
+    failed_files: list[Path] = []
+
+    for pdf_path in pdf_paths:
+        try:
+            data = run_parser(pdf_path)
+        except SystemExit:
+            failed_files.append(pdf_path)
+            continue
+        except Exception as e:
+            print(f"Error parsing {pdf_path}: {e}", file=sys.stderr)
+            failed_files.append(pdf_path)
+            continue
+
+        transactions = data.get("transactions", [])
+        if not transactions:
+            continue
+
+        period = data.get("statementPeriod")
+        rows = [
+            TransactionRow(
+                date=_convert_date(t["transactionDate"], period),
+                merchant=t["description"],
+                amount=t["amount"],
+            )
+            for t in transactions
+        ]
+        all_rows.extend(rows)
+
+    if failed_files:
+        print("\nThe following files could not be parsed:", file=sys.stderr)
+        for f in failed_files:
+            print(f"  - {f}", file=sys.stderr)
+
+    if not all_rows:
+        print("No transactions found.", file=sys.stderr)
+        sys.exit(1 if failed_files else 0)
+
+    append_to_excel(xlsx_path, all_rows)
+    print(f"Appended {len(all_rows)} transactions to {xlsx_path}")
+
+    if failed_files:
         sys.exit(1)
-
-    # Run the TypeScript parser
-    data = run_parser(pdf_path)
-    transactions = data.get("transactions", [])
-
-    if not transactions:
-        print("No transactions found in PDF.", file=sys.stderr)
-        sys.exit(0)
-
-    # Convert to output rows
-    period = data.get("statementPeriod")
-    rows = [
-        TransactionRow(
-            date=_convert_date(t["transactionDate"], period),
-            merchant=t["description"],
-            amount=t["amount"],
-        )
-        for t in transactions
-    ]
-
-    # Write to Excel
-    append_to_excel(xlsx_path, rows)
-    print(f"Appended {len(rows)} transactions to {xlsx_path}")
 
 
 def _convert_date(rbc_date: str, period: dict | None) -> str:

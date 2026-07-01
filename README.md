@@ -29,6 +29,8 @@
 ## Fonctionnalités
 
 - Extraction automatique des transactions depuis un relevé PDF RBC
+- **Parsing par lot** : traitement d'un répertoire entier de relevés PDF via l'option `-d`
+- **Gestion gracieuse des erreurs** : en mode batch, les fichiers en échec sont listés sans interrompre le traitement
 - Conversion intelligente des dates françaises (`15 DÉC` → `2024-12-15`)
 - **Ajout à la suite** dans un fichier Excel existant, ou création d'un nouveau fichier avec en-têtes
 - Parser TypeScript testable isolément pour le débogage
@@ -50,14 +52,24 @@ pip install -e ".[dev]"
 
 ## Utilisation
 
-### Commande principale
+### Fichier unique
 
 ```bash
-python3 -m spend_board_cli <releve_rbc.pdf> <transactions.xlsx>
+python3 -m spend_board_cli -f <releve_rbc.pdf> <transactions.xlsx>
 ```
 
 - Si `transactions.xlsx` n'existe pas, il est créé avec une ligne d'en-tête.
 - S'il existe, les transactions sont **ajoutées à la fin** (pas d'écrasement).
+
+### Répertoire (batch)
+
+```bash
+python3 -m spend_board_cli -d <releves/> <transactions.xlsx>
+```
+
+- Traite tous les fichiers `.pdf` du répertoire, dans l'ordre alphabétique.
+- En cas d'erreur sur un fichier, celui-ci est ignoré et le traitement continue avec les suivants.
+- Les fichiers qui n'ont pas pu être parsés sont listés à la fin de l'exécution.
 
 ### Tester le parser TypeScript isolément
 

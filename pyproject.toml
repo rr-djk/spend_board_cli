@@ -1,6 +1,6 @@
 [project]
 name = "spend-board-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "CLI to parse RBC credit card statement PDFs and append transactions to Excel"
 requires-python = ">=3.10"
 dependencies = [
