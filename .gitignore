@@ -7,3 +7,6 @@ dist/
 *.xlsx
 
 OPENCODE.md
+AGENTS.md
+.gstack/
+AGENTS.md
