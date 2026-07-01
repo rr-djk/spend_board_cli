@@ -65,17 +65,23 @@ def main() -> None:
         description="Parse RBC credit card statement PDF(s) and append transactions to Excel."
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-f", "--file", type=str, dest="input_path", help="Path to a single RBC statement PDF")
-    group.add_argument("-d", "--directory", type=str, dest="input_path", help="Path to a directory containing RBC statement PDFs")
+    group.add_argument("-f", "--file", type=str, dest="file_path", help="Path to a single RBC statement PDF")
+    group.add_argument("-d", "--directory", type=str, dest="dir_path", help="Path to a directory containing RBC statement PDFs")
     parser.add_argument("xlsx_path", type=str, help="Path to the output Excel file")
     args = parser.parse_args()
 
-    input_path = Path(args.input_path)
     xlsx_path = Path(args.xlsx_path)
 
-    if not input_path.exists():
-        print(f"Error: path not found: {input_path}", file=sys.stderr)
-        sys.exit(1)
+    if args.file_path is not None:
+        input_path = Path(args.file_path)
+        if not input_path.is_file():
+            print(f"Error: -f requires a file, got: {input_path}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        input_path = Path(args.dir_path)
+        if not input_path.is_dir():
+            print(f"Error: -d requires a directory, got: {input_path}", file=sys.stderr)
+            sys.exit(1)
 
     pdf_paths = collect_pdfs(input_path)
     all_rows: list[TransactionRow] = []
