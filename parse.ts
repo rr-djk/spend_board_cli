@@ -20,11 +20,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = resolve(
   "node_modules/pdfjs-dist/build/pdf.worker.min.mjs"
 );
 
-import { extractTextBlocksFromPage } from "../spend_board/frontend/src/utils/pdf/extractTextBlocks.js";
-import { groupTextLines } from "../spend_board/frontend/src/utils/pdf/groupTextLines.js";
-import { detectBank } from "../spend_board/frontend/src/utils/parsers/bankDetector.js";
-import { parseRbcTransactions } from "../spend_board/frontend/src/utils/parsers/rbcStatementParser.js";
-import { parseStatementPeriod } from "../spend_board/frontend/src/utils/parsers/rbcStatementPeriodParser.js";
+import { extractTextBlocksFromPage } from "./src/pdf/extractTextBlocks.js";
+import { groupTextLines } from "./src/pdf/groupTextLines.js";
+import { detectBank } from "./src/parsers/bankDetector.js";
+import { parseRbcTransactions } from "./src/parsers/rbcStatementParser.js";
+import { parseStatementPeriod } from "./src/parsers/rbcStatementPeriodParser.js";
 
 async function main() {
   const pdfPath = process.argv[2];
