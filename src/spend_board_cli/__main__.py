@@ -107,17 +107,17 @@ def main() -> None:
         ]
         all_rows.extend(rows)
 
+    if failed_files:
+        print("\nThe following files could not be parsed:", file=sys.stderr)
+        for f in failed_files:
+            print(f"  - {f}", file=sys.stderr)
+
     if not all_rows:
         print("No transactions found.", file=sys.stderr)
         sys.exit(0)
 
     append_to_excel(xlsx_path, all_rows)
     print(f"Appended {len(all_rows)} transactions to {xlsx_path}")
-
-    if failed_files:
-        print("\nThe following files could not be parsed:", file=sys.stderr)
-        for f in failed_files:
-            print(f"  - {f}", file=sys.stderr)
 
 
 def _convert_date(rbc_date: str, period: dict | None) -> str:
