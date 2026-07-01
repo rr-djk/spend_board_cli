@@ -50,10 +50,10 @@ def collect_pdfs(input_path: Path) -> list[Path]:
         return [input_path]
 
     if input_path.is_dir():
-        pdfs = [p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"]
+        pdfs = sorted([p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() == ".pdf"])
         if not pdfs:
             print(f"No PDF files found in directory: {input_path}", file=sys.stderr)
-            sys.exit(0)
+            sys.exit(1)
         return pdfs
 
     print(f"Error: path not found: {input_path}", file=sys.stderr)
@@ -114,10 +114,13 @@ def main() -> None:
 
     if not all_rows:
         print("No transactions found.", file=sys.stderr)
-        sys.exit(0)
+        sys.exit(1 if failed_files else 0)
 
     append_to_excel(xlsx_path, all_rows)
     print(f"Appended {len(all_rows)} transactions to {xlsx_path}")
+
+    if failed_files:
+        sys.exit(1)
 
 
 def _convert_date(rbc_date: str, period: dict | None) -> str:
