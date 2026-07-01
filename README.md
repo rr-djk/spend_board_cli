@@ -1,8 +1,37 @@
-# spend_board_cli
+<p align="center">
+  <img src="images/logo.png" alt="spend_board_cli" width="200">
+</p>
 
-Parse les relevés de carte de crédit RBC (PDF) et ajoute les transactions dans un fichier Excel.
+<h1 align="center">spend_board_cli</h1>
 
-La logique de parsing est partagée avec l'application web [spend_board](../spend_board) — `parse.ts` importe directement les parsers TypeScript depuis `../spend_board/frontend/src/utils/parsers/`, il n'y a donc aucune logique dupliquée.
+<p align="center">
+  Parse les relevés de carte de crédit <strong>RBC</strong> (PDF) et ajoute les transactions dans un fichier Excel.
+</p>
+
+<p align="center">
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/python-3.10+-blue.svg">
+  <img alt="Node.js 20+" src="https://img.shields.io/badge/node-20+-green.svg">
+</p>
+
+> ⚠️ **Limitation importante** : Cet outil a été développé et testé **uniquement sur des relevés de carte de crédit RBC**. Il n'a pas été testé sur les relevés d'autres banques canadiennes (TD, Scotia, CIBC, etc.) et les rejettera systématiquement via le détecteur de banque.
+
+## Table des matières
+
+- [Fonctionnalités](#fonctionnalités)
+- [Prérequis](#prérequis)
+- [Installation](#installation)
+- [Utilisation](#utilisation)
+- [Format de sortie](#format-de-sortie)
+- [Architecture](#architecture)
+- [Limitations connues](#limitations-connues)
+- [Dépannage](#dépannage)
+
+## Fonctionnalités
+
+- Extraction automatique des transactions depuis un relevé PDF RBC
+- Conversion intelligente des dates françaises (`15 DÉC` → `2024-12-15`)
+- **Ajout à la suite** dans un fichier Excel existant, ou création d'un nouveau fichier avec en-têtes
+- Parser TypeScript testable isolément pour le débogage
 
 ## Prérequis
 
@@ -12,29 +41,31 @@ La logique de parsing est partagée avec l'application web [spend_board](../spen
 ## Installation
 
 ```bash
-# Installer les dépendances Node.js (pdfjs-dist, tsx)
+# Dépendances Node.js (pdfjs-dist, tsx)
 npm install
 
-# Installer le package Python en mode dev (inclut pytest)
+# Package Python en mode éditable (inclut pytest)
 pip install -e ".[dev]"
 ```
 
 ## Utilisation
+
+### Commande principale
 
 ```bash
 python3 -m spend_board_cli <releve_rbc.pdf> <transactions.xlsx>
 ```
 
 - Si `transactions.xlsx` n'existe pas, il est créé avec une ligne d'en-tête.
-- S'il existe, les transactions sont ajoutées à la fin.
+- S'il existe, les transactions sont **ajoutées à la fin** (pas d'écrasement).
 
-Vous pouvez aussi tester le pont de parsing directement :
+### Tester le parser TypeScript isolément
 
 ```bash
 npx tsx parse.ts releve.pdf
 ```
 
-Cela affiche en JSON dans stdout les transactions parsées.
+Affiche le JSON parsé dans stdout (utile pour déboguer sans toucher Excel).
 
 ## Format de sortie
 
@@ -46,29 +77,27 @@ Fichier Excel avec 3 colonnes :
 | Marchant  | Nom du marchand                 | `TIM HORTON`   |
 | Montant   | Nombre (négatif = paiement/crédit) | `-45.00`    |
 
-## Fonctionnement
+## Architecture
 
-1. Le CLI Python appelle `parse.ts` via un sous-processus (`npx tsx`)
-2. `parse.ts` utilise `pdfjs-dist` pour extraire le texte du PDF, puis exécute les parsers RBC du frontend spend_board
+Le projet est un CLI hybride Python / TypeScript :
+
+1. **Python** (`src/spend_board_cli/__main__.py`) appelle `parse.ts` via sous-processus (`npx tsx`)
+2. **TypeScript** (`parse.ts`) utilise `pdfjs-dist` pour extraire le texte du PDF, puis exécute les parsers locaux dans `src/parsers/` et `src/pdf/`
 3. Le parser retourne du JSON (banque, période du relevé, transactions)
-4. Python convertit les dates (noms de mois en français comme `15 DÉC` → `2024-12-15`), puis écrit les lignes dans Excel via `openpyxl`
+4. **Python** convertit les dates (noms de mois en français → ISO), puis écrit les lignes dans Excel via `openpyxl`
 
-## Structure du projet
+> **Note** : Les modules `src/parsers/` et `src/pdf/` sont des copies locales synchronisées depuis le projet sibling `../spend_board`. Le source of truth reste dans `../spend_board/frontend/src/utils/`.
 
-```
-spend_board_cli/
-├── package.json              # Dépendances Node.js (pdfjs-dist, tsx)
-├── parse.ts                  # Pont : importe les parsers TS depuis ../spend_board
-├── pyproject.toml            # Configuration du CLI Python
-└── src/spend_board_cli/
-    ├── __init__.py
-    ├── __main__.py           # Point d'entrée du CLI
-    ├── date_converter.py     # "15 DÉC" → "2020-12-15"
-    └── excel_writer.py       # Créer/ajouter dans Excel
-```
+## Limitations connues
 
-## Notes
+- **RBC uniquement** — le détecteur de banque (`src/parsers/bankDetector.ts`) rejette tout autre relevé
+- **Pas de détection de doublons** — gérez la déduplication dans Excel vous-même
+- **Pas de tests automatisés** — la suite pytest est configurée mais le répertoire `tests/` est vide
 
-- Seuls les relevés RBC sont supportés — les autres banques sont rejetées par le détecteur de banque.
-- La détection des doublons n'est pas gérée ; gérez la déduplication dans Excel vous-même.
-- Le message `Warning: Please use the 'legacy' build in Node.js environments.` de pdfjs-dist est sans conséquence.
+## Dépannage
+
+### `Warning: Please use the 'legacy' build in Node.js environments.`
+Ce warning de `pdfjs-dist` est sans conséquence et peut être ignoré. Le parser Python filtre déjà les lignes non-JSON de stdout.
+
+### `Unsupported bank: unknown`
+Le PDF fourni n'est pas un relevé RBC reconnu. Vérifiez que le PDF contient bien les mentions "Royal Bank" ou "RBC" dans les 30 premières lignes de la première page.
