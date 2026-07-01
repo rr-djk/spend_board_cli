@@ -1,0 +1,11 @@
+{
+  "name": "spend-board-cli-parser",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38"
+  }
+}
